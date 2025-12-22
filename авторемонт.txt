@@ -1,0 +1,95 @@
+USE mydb;
+CREATE TABLE owners (
+    owner_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50),
+    driver_license VARCHAR(50)
+);
+
+CREATE TABLE mechanics (
+    mechanic_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50),
+    rank_level INT
+);
+
+CREATE TABLE workshops (
+    shop_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50)
+);
+
+CREATE TABLE cars (
+    car_id INT AUTO_INCREMENT PRIMARY KEY,
+    plate_num VARCHAR(20),
+    brand VARCHAR(50),
+    power INT,
+    year INT,
+    color VARCHAR(30),
+    owner_id INT,
+    FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
+
+CREATE TABLE repairs (
+    repair_id INT AUTO_INCREMENT PRIMARY KEY,
+    cost DECIMAL(15,2),
+    date_start DATE,
+    category VARCHAR(50),
+    date_plan DATE,
+    date_actual DATE,
+    car_id INT,
+    mechanic_id INT,
+    shop_id INT,
+    FOREIGN KEY (car_id) REFERENCES cars(car_id),
+    FOREIGN KEY (mechanic_id) REFERENCES mechanics(mechanic_id),
+    FOREIGN KEY (shop_id) REFERENCES workshops(shop_id)
+);
+
+INSERT INTO owners (name, address, phone, driver_license) VALUES 
+('Клиент Верный', 'Москва', '111', 'LIC-001'),
+('Клиент Разный', 'Тверь', '222', 'LIC-002');
+
+INSERT INTO mechanics (name, address, phone, rank_level) VALUES 
+('Петров (Старший)', 'Москва', '01', 6),
+('Иванов (Новичок)', 'Москва', '02', 3);
+
+INSERT INTO workshops (name, address, phone) VALUES 
+('Авто-Сервис №1', 'Центр', '555');
+
+INSERT INTO cars (brand, year, power, color, plate_num, owner_id) VALUES 
+('GAZ-M1', 1938, 50, 'Black', 'A-1938', 1),
+('Mercedes', 2020, 250, 'White', 'M-777', 2),
+('BMW', 2019, 200, 'Blue', 'B-123', 1);
+
+INSERT INTO repairs (car_id, mechanic_id, shop_id, category, date_plan, date_actual, cost) VALUES 
+(1, 1, 1, 'Двигатель', '2025-01-10', '2025-01-10', 5000.00),
+(1, 1, 1, 'Подвеска', '2025-02-01', '2025-02-01', 3000.00),
+(2, 2, 1, 'Кузов', '2025-03-01', '2025-03-05', 15000.00),
+(3, 1, 1, 'Двигатель', '2025-04-01', '2025-04-01', 8000.00);
+Выборки: 
+•	Выбрать фамилию того механика, который чаще всех работает с довоенными автомобилями. 
+SELECT m.name
+FROM mechanics m, repairs r, cars c
+WHERE m.mechanic_id = r.mechanic_id AND r.car_id = c.car_id
+  AND c.year < 1941
+GROUP BY m.mechanic_id
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+•	Выбрать случаи, когда ремонт автомобилей марки «Мерседес» задерживался относительно планового срока. 
+SELECT c.brand, c.plate_num, r.date_plan, r.date_actual
+FROM cars c, repairs r
+WHERE c.car_id = r.car_id
+  AND c.brand = 'Mercedes'
+  AND r.date_actual > r.date_plan;
+•	Определить тех владельцев автомобилей, которых всегда обслуживает один и тот же механик. Вывести фамилии механика и его постоянного клиента. 
+SELECT o.name AS Владелец, MIN(m.name) AS Механик
+FROM owners o, cars c, repairs r, mechanics m
+WHERE o.owner_id = c.owner_id 
+  AND c.car_id = r.car_id 
+  AND r.mechanic_id = m.mechanic_id
+GROUP BY o.owner_id
+HAVING COUNT(DISTINCT r.mechanic_id) = 1;
+•	Для каждой категории работ определить, механик какого разряда чаще всего назначается на эту категорию работ.

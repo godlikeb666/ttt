@@ -1,0 +1,114 @@
+USE mydb;
+
+
+CREATE TABLE authors (
+    author_id INT AUTO_INCREMENT PRIMARY KEY,
+    last_name VARCHAR(45) NOT NULL,
+    first_name VARCHAR(45) NOT NULL,
+    middle_name VARCHAR(45)
+);
+
+
+CREATE TABLE readers (
+    reader_id INT AUTO_INCREMENT PRIMARY KEY,
+    last_name VARCHAR(45) NOT NULL,
+    first_name VARCHAR(45) NOT NULL,
+    middle_name VARCHAR(45),
+    address VARCHAR(200),
+    phone VARCHAR(45)
+);
+
+
+CREATE TABLE books (
+    book_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(45) NOT NULL,
+    year INT,
+    kolvo INT,
+    annotation TEXT,
+    author_id INT,
+    FOREIGN KEY (author_id) REFERENCES authors(author_id)
+);
+
+
+CREATE TABLE items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    price DECIMAL(15,2),
+    otmetka ENUM('На полке', 'Нет в наличии'),
+    book_id INT,
+    FOREIGN KEY (book_id) REFERENCES books(book_id)
+);
+
+
+CREATE TABLE loans (
+    record_id INT AUTO_INCREMENT PRIMARY KEY,
+    start_date DATE,
+    end_date DATE,
+    reader_id INT,
+    item_id INT,
+    FOREIGN KEY (reader_id) REFERENCES readers(reader_id),
+    FOREIGN KEY (item_id) REFERENCES items(item_id)
+);
+
+
+
+INSERT INTO authors (last_name, first_name, middle_name) VALUES 
+('Пушкин', 'Александр', 'Сергеевич'),
+('Булгаков', 'Михаил', 'Афанасьевич'),
+('Толстой', 'Лев', 'Николаевич');
+
+INSERT INTO readers (last_name, first_name, middle_name, address, phone) VALUES 
+('Иванов', 'Иван', 'Иванович', 'ул. Ленина 1', '89001112233'),
+('Петрова', 'Анна', 'Сергеевна', 'ул. Мира 5', '89004445566'),
+('Сидоров', 'Алексей', 'Петрович', 'ул. Победы 2', '89007778899');
+
+INSERT INTO books (name, year, kolvo, annotation, author_id) VALUES 
+('Евгений Онегин', 1833, 5, 'Классика', 1),
+('Мастер и Маргарита', 1967, 3, 'Мистика', 2),
+('Война и мир', 1869, 4, 'Эпопея', 3);
+
+INSERT INTO items (price, otmetka, book_id) VALUES 
+(500.00, 'На полке', 1),   
+(550.00, 'На полке', 1),     
+(1200.00, 'Нет в наличии', 2), 
+(1500.00, 'Нет в наличии', 3),
+(1250.00, 'На полке', 2);      
+
+INSERT INTO loans (start_date, end_date, reader_id, item_id) VALUES 
+('2025-01-15', NULL, 1, 4),
+('2025-03-10', NULL, 2, 3), 
+('2025-04-20', '2025-04-25', 3, 5);
+  
+
+
+
+SELECT k.name 
+FROM books k, items i
+WHERE k.book_id = i.book_id 
+  AND i.otmetka = 'На полке'
+GROUP BY k.book_id
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+
+SELECT r.last_name, l.start_date
+FROM readers r, loans l
+WHERE r.reader_id = l.reader_id 
+  AND l.end_date IS NULL 
+  AND l.start_date < (NOW() - INTERVAL 4 MONTH);
+
+SELECT k.name 
+FROM books k, items i, loans l
+WHERE k.book_id = i.book_id 
+  AND i.item_id = l.item_id
+  AND MONTH(l.start_date) BETWEEN 3 AND 5
+GROUP BY k.book_id
+ORDER BY COUNT(*) DESC 
+LIMIT 1;
+
+
+SELECT r.last_name
+FROM readers r, loans l, items i
+WHERE r.reader_id = l.reader_id 
+  AND l.item_id = i.item_id
+  AND l.end_date IS NULL
+GROUP BY r.reader_id
+HAVING SUM(i.price) > 1000;

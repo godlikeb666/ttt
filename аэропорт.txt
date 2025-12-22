@@ -1,0 +1,76 @@
+USE mydb;
+
+CREATE TABLE aircrafts (
+    aircraft_id INT AUTO_INCREMENT PRIMARY KEY,
+    model VARCHAR(50) NOT NULL,
+    seats INT,
+    speed DECIMAL(10,2)
+);
+
+CREATE TABLE routes (
+    route_id INT AUTO_INCREMENT PRIMARY KEY,
+    route_code VARCHAR(20),
+    departure_point VARCHAR(100),
+    destination_point VARCHAR(100),
+    distance DECIMAL(10,2)
+);
+
+CREATE TABLE flights (
+    flight_id INT AUTO_INCREMENT PRIMARY KEY,
+    flight_number VARCHAR(20),
+    route_id INT,
+    aircraft_id INT,
+    departure_time DATETIME,
+    arrival_time DATETIME,
+    tickets_sold INT,
+    FOREIGN KEY (route_id) REFERENCES routes(route_id),
+    FOREIGN KEY (aircraft_id) REFERENCES aircrafts(aircraft_id)
+);
+
+INSERT INTO aircrafts (model, seats, speed) VALUES 
+('ТУ-154', 160, 850.00),
+('Boeing 737', 180, 800.00),
+('An-24', 40, 450.00);
+
+INSERT INTO routes (route_code, departure_point, destination_point, distance) VALUES 
+('R-01', 'Чугуев', 'Мерефа', 450.00),
+('R-02', 'Москва', 'Сочи', 1300.00),
+('R-03', 'Киев', 'Львов', 500.00);
+
+INSERT INTO flights (flight_number, route_id, aircraft_id, departure_time, tickets_sold) VALUES 
+('SU-100', 1, 1, '2025-01-01 10:00:00', 100),
+('SU-101', 1, 1, '2025-01-02 10:00:00', 150),
+('SU-102', 1, 2, '2025-01-03 12:00:00', 50), 
+('SU-200', 2, 2, '2025-01-05 14:00:00', 20), 
+('SU-201', 2, 2, '2025-01-06 14:00:00', 30), 
+('870', 3, 1, '2013-12-31 18:00:00', 150);
+Выборки: 
+•	Определить среднее расчетное время полета для самолета «ТУ-154» по маршруту «Чугуев» - «Мерефа». 
+SELECT (r.distance / a.speed) AS avg_flight_hours
+FROM routes r, aircrafts a
+WHERE r.departure_point = 'Чугуев' 
+  AND r.destination_point = 'Мерефа' 
+  AND a.model = 'ТУ-154';
+•	Выбрать марку самолета, которая чаще всего летает по тому же маршруту. 
+SELECT a.model
+FROM flights f, routes r, aircrafts a
+WHERE f.route_id = r.route_id AND f.aircraft_id = a.aircraft_id
+  AND r.departure_point = 'Чугуев' 
+  AND r.destination_point = 'Мерефа'
+GROUP BY a.model
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+•	Выбрать маршрут/маршруты, по которым чаще всего летают рейсы, заполненные менее чем на 70%. 
+SELECT r.route_code, r.departure_point, r.destination_point
+FROM flights f, aircrafts a, routes r
+WHERE f.aircraft_id = a.aircraft_id AND f.route_id = r.route_id
+  AND f.tickets_sold < (a.seats * 0.7)
+GROUP BY r.route_id
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+•	Определить наличие свободных мест на рейс №870 31 декабря 2013 г.
+SELECT (a.seats - f.tickets_sold) AS free_seats
+FROM flights f, aircrafts a
+WHERE f.aircraft_id = a.aircraft_id
+  AND f.flight_number = '870'
+  AND DATE(f.departure_time) = '2013-12-31'

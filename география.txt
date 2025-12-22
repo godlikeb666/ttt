@@ -1,0 +1,58 @@
+USE mydb;
+
+CREATE TABLE countries (
+    country_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region VARCHAR(100),
+    capital VARCHAR(100),
+    area DECIMAL(15,2),
+    is_developed BOOLEAN,
+    population INT
+);
+
+CREATE TABLE demographics (
+    demo_id INT AUTO_INCREMENT PRIMARY KEY,
+    country_id INT,
+    nationality_name VARCHAR(100),
+    language VARCHAR(100),
+    people_count INT,
+    FOREIGN KEY (country_id) REFERENCES countries(country_id)
+);
+
+INSERT INTO countries (name, region, capital, area, is_developed, population) VALUES 
+('Китай', 'Азия', 'Пекин', 9600000.00, 1, 1400000),
+('Альфхейм', 'Волшебный лес', 'Сильвермун', 50000.00, 1, 10000),
+('Подгорье', 'Драконовы Горы', 'Карак', 20000.00, 0, 50000),
+('Пик Ветров', 'Драконовы Горы', 'Эйри', 15000.00, 0, 2000);
+
+INSERT INTO demographics (country_id, nationality_name, language, people_count) VALUES 
+(1, 'Хань', 'Китайский', 1300000),
+(1, 'Уйгуры', 'Уйгурский', 10000),
+(2, 'Светлый эльф', 'Эльфийский', 9500),
+(2, 'Человек', 'Всеобщий', 500),
+(3, 'Гном', 'Гномий', 48000),
+(3, 'Светлый эльф', 'Эльфийский', 200),
+(4, 'Гарпия', 'Визг', 1500),
+(4, 'Драконид', 'Драконий', 500);
+Выборки: 
+•	Считая, что государственным является язык, на котором разговаривает не менее 20% населения страны, выбрать список государственных языков страны «Китай».
+SELECT d.language
+FROM countries c, demographics d
+WHERE c.country_id = d.country_id
+  AND c.name = 'Китай'
+  AND (d.people_count / c.population) >= 0.2;
+•	Выбрать численность населения по всем странам. 
+SELECT name, population
+FROM countries;
+•	Определить столицу той страны, где проживает более всего представителей национальности «светлый эльф». 
+SELECT c.capital
+FROM countries c, demographics d
+WHERE c.country_id = d.country_id
+  AND d.nationality_name = 'Светлый эльф'
+ORDER BY d.people_count DESC
+LIMIT 1;
+•	Выбрать список национальностей, проживающих в регионе «Драконовы Горы»
+SELECT DISTINCT d.nationality_name
+FROM countries c, demographics d
+WHERE c.country_id = d.country_id
+  AND c.region = 'Драконовы Горы';

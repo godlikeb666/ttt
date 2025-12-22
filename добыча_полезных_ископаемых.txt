@@ -1,0 +1,69 @@
+USE mydb;
+
+CREATE TABLE minerals (
+    mineral_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    unit VARCHAR(20),
+    annual_demand INT,
+    price DECIMAL(10,2),
+    type VARCHAR(50)
+);
+
+CREATE TABLE export_points (
+    point_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    capacity INT
+);
+
+CREATE TABLE deposits (
+    deposit_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    reserves INT,
+    method VARCHAR(50),
+    annual_production INT,
+    unit_cost DECIMAL(10,2),
+    mineral_id INT,
+    point_id INT,
+    FOREIGN KEY (mineral_id) REFERENCES minerals(mineral_id),
+    FOREIGN KEY (point_id) REFERENCES export_points(point_id)
+);
+
+INSERT INTO minerals (name, unit, annual_demand, price, type) VALUES 
+('Золото', 'кг', 1000, 5000.00, 'Драгоценный металл'),
+('Уголь', 'тонна', 50000, 100.00, 'Твердое топливо'),
+('Нефть', 'баррель', 100000, 80.00, 'Жидкое топливо'),
+('Железная руда', 'тонна', 20000, 50.00, 'Металл');
+
+INSERT INTO export_points (name, capacity) VALUES 
+('Порт Восточный', 100000),
+('ЖД Станция Север', 50000);
+
+INSERT INTO deposits (name, reserves, method, annual_production, unit_cost, mineral_id, point_id) VALUES 
+('Бедное', 550, 'Шахтный', 100, 4000.00, 1, 1), 
+('Богатое', 100000, 'Открытый', 2000, 40.00, 2, 1), 
+('Эльдорадо', 5000, 'Открытый', 200, 4500.00, 1, 2),
+('Сибирь', 50000, 'Скважина', 5000, 90.00, 3, 2), 
+('Урал', 10000, 'Открытый', 1000, 30.00, 2, 2);
+Выборки: 
+•	Считая, что показатели даны на текущий год, а ежегодная добыча будет возрастать на 10% каждый год, определить те месторождения, которые будут исчерпаны через 5 лет. 
+SELECT name 
+FROM deposits
+WHERE reserves < (annual_production * 6.1051);
+•	Определить те ископаемые, потребность в которых не удовлетворяется. 
+SELECT m.name
+FROM minerals m
+LEFT JOIN deposits d ON m.mineral_id = d.mineral_id
+GROUP BY m.mineral_id
+HAVING m.annual_demand > IFNULL(SUM(d.annual_production), 0);
+•	Определить, какие ископаемые добываются в «Эльдорадо», и добыча каких из них является прибыльной. 
+SELECT m.name AS Mineral, 
+       (m.price > d.unit_cost) AS Is_Profitable
+FROM deposits d, minerals m
+WHERE d.mineral_id = m.mineral_id
+  AND d.name = 'Эльдорадо';
+•	Выбрать список мест, в которых добывается «твердое топливо» «открытым способом».
+SELECT d.name
+FROM deposits d, minerals m
+WHERE d.mineral_id = m.mineral_id
+  AND m.type = 'Твердое топливо'
+  AND d.method = 'Открытый'; 

@@ -1,0 +1,75 @@
+USE mydb;
+
+CREATE TABLE transport_types (
+    type_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    avg_speed DECIMAL(5,2),
+    park_count INT,
+    fare DECIMAL(10,2)
+);
+
+CREATE TABLE routes (
+    route_id INT AUTO_INCREMENT PRIMARY KEY,
+    route_number VARCHAR(10),
+    type_id INT,
+    stops_count INT,
+    cars_on_route INT,
+    daily_passengers INT,
+    FOREIGN KEY (type_id) REFERENCES transport_types(type_id)
+);
+
+CREATE TABLE route_paths (
+    path_id INT AUTO_INCREMENT PRIMARY KEY,
+    route_id INT,
+    start_point VARCHAR(100),
+    end_point VARCHAR(100),
+    distance DECIMAL(10,2),
+    FOREIGN KEY (route_id) REFERENCES routes(route_id)
+);
+
+INSERT INTO transport_types (name, avg_speed, park_count, fare) VALUES 
+('Трамвай', 15.00, 50, 8.00),
+('Троллейбус', 20.00, 60, 10.00),
+('Автобус', 30.00, 40, 15.00),
+('Метро', 50.00, 20, 20.00);
+
+INSERT INTO routes (route_number, type_id, stops_count, cars_on_route, daily_passengers) VALUES 
+('3', 1, 15, 5, 2000),
+('27', 1, 25, 8, 3000),
+('39', 2, 20, 4, 1500),
+('100', 3, 10, 6, 5000),
+('M1', 4, 10, 10, 50000);
+
+INSERT INTO route_paths (route_id, start_point, end_point, distance) VALUES 
+(1, 'Холодная Гора', 'Парк', 12.0),
+(2, 'Вокзал', 'Завод', 15.5),
+(3, 'Центр', 'Окраина', 10.0),
+(4, 'Холодная Гора', 'Парк', 14.0),
+(5, 'Холодная Гора', 'Парк', 11.0);
+Выборки: 
+•	Определить оптимальный по времени маршрут между пунктами «Холодная Гора» и «Парк». 
+SELECT t.name, r.route_number, (rp.distance / t.avg_speed * 60) AS travel_time_min
+FROM routes r, route_paths rp, transport_types t
+WHERE r.route_id = rp.route_id AND r.type_id = t.type_id
+  AND rp.start_point = 'Холодная Гора' 
+  AND rp.end_point = 'Парк'
+ORDER BY travel_time_min ASC
+LIMIT 1;
+•	Определить среднее время ожидания на остановке троллейбуса №39.
+SELECT (rp.distance / t.avg_speed * 60) / r.cars_on_route AS avg_wait_min
+FROM routes r, route_paths rp, transport_types t
+WHERE r.route_id = rp.route_id AND r.type_id = t.type_id
+  AND t.name = 'Троллейбус'
+  AND r.route_number = '39'; 
+•	Вывести маршруты трамваев в порядке убывания их протяженности. 
+SELECT r.route_number, rp.distance
+FROM routes r, route_paths rp, transport_types t
+WHERE r.route_id = rp.route_id AND r.type_id = t.type_id
+  AND t.name = 'Трамвай'
+ORDER BY rp.distance DESC;
+•	Вывести список ежедневных денежных поступлений для всех видов транспорта. 
+SELECT t.name, SUM(r.daily_passengers * t.fare) AS daily_income
+FROM transport_types t, routes r
+WHERE t.type_id = r.type_id
+GROUP BY t.type_id, t.name;
+

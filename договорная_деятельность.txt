@@ -1,0 +1,68 @@
+USE mydb;
+
+CREATE TABLE works (
+    work_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    total_hours INT,
+    deadline_date DATE
+);
+
+CREATE TABLE employees (
+    emp_id INT AUTO_INCREMENT PRIMARY KEY,
+    tab_num VARCHAR(20),
+    fio VARCHAR(100) NOT NULL,
+    position VARCHAR(100)
+);
+
+CREATE TABLE assignments (
+    assign_id INT AUTO_INCREMENT PRIMARY KEY,
+    work_id INT,
+    emp_id INT,
+    date_assigned DATE,
+    hours INT,
+    date_plan DATE,
+    date_actual DATE,
+    FOREIGN KEY (work_id) REFERENCES works(work_id),
+    FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+);
+
+INSERT INTO works (code, name, total_hours, deadline_date) VALUES 
+('W-001', 'Разработка сайта', 100, '2025-12-31'),
+('W-002', 'Проект Гелиограф', 500, '2025-06-01'),
+('W-003', 'Аудит', 50, '2025-01-20');
+
+INSERT INTO employees (tab_num, fio, position) VALUES 
+('T-101', 'Иванов И.И.', 'Программист'),
+('T-102', 'Петров П.П.', 'Менеджер'),
+('T-103', 'Сидоров С.С.', 'Аналитик');
+
+INSERT INTO assignments (work_id, emp_id, date_assigned, hours, date_plan, date_actual) VALUES 
+(1, 1, '2025-01-01', 40, '2026-01-10', NULL),
+(2, 1, '2025-03-01', 100, '2025-05-01', '2025-05-01'),
+(2, 3, '2025-04-01', 100, '2025-05-20', '2025-05-20'),
+(3, 2, '2024-12-01', 10, '2025-01-10', '2025-01-10');
+Выборки: 
+•	Определить те случаи, когда заболевание «язва желудка» лечилось врачом специализации «невропатолог». 
+SELECT DISTINCT w.name
+FROM works w, assignments a
+WHERE w.work_id = a.work_id
+  AND YEAR(w.deadline_date) = 2025
+  AND a.date_plan > w.deadline_date;
+•	Вывести имена тех врачей, которые работают исключительно с пенсионерами. 
+SELECT COUNT(DISTINCT work_id)
+FROM assignments
+WHERE emp_id = 1
+  AND (MONTH(date_assigned) BETWEEN 3 AND 5 OR MONTH(date_actual) BETWEEN 3 AND 5)
+  AND YEAR(date_assigned) = 2025;
+•	Определить процент смертности от заболевания «кариес». 
+SELECT w.name
+FROM works w
+LEFT JOIN assignments a ON w.work_id = a.work_id AND a.date_actual <= w.deadline_date
+GROUP BY w.work_id
+HAVING SUM(IFNULL(a.hours, 0)) <= (w.total_hours * 0.5);
+•	Пациентов, которые болеют (болели) всеми болезнями. 
+SELECT DISTINCT e.position
+FROM employees e, assignments a, works w
+WHERE e.emp_id = a.emp_id AND a.work_id = w.work_id
+  AND w.name = 'Проект Гелиограф';

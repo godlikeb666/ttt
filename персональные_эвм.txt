@@ -1,0 +1,85 @@
+USE mydb;
+
+CREATE TABLE manufacturers (
+    manuf_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    city VARCHAR(100)
+);
+
+CREATE TABLE pc_specs (
+    pc_id INT AUTO_INCREMENT PRIMARY KEY,
+    processor VARCHAR(50),
+    frequency DECIMAL(10,2),
+    ram_size INT,
+    hdd_size INT,
+    release_date DATE
+);
+
+CREATE TABLE sellers (
+    seller_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50)
+);
+
+CREATE TABLE market_offers (
+    offer_id INT AUTO_INCREMENT PRIMARY KEY,
+    manuf_id INT,
+    pc_id INT,
+    seller_id INT,
+    quantity INT,
+    batch_price DECIMAL(15,2),
+    FOREIGN KEY (manuf_id) REFERENCES manufacturers(manuf_id),
+    FOREIGN KEY (pc_id) REFERENCES pc_specs(pc_id),
+    FOREIGN KEY (seller_id) REFERENCES sellers(seller_id)
+);
+
+INSERT INTO manufacturers (name, city) VALUES 
+('Tech-Giant', 'New York'),
+('Local-Assembly', 'Богодухов'),
+('Super-Computers', 'Tokyo');
+
+INSERT INTO pc_specs (processor, frequency, ram_size, hdd_size, release_date) VALUES 
+('Pentium-IV', 2.4, 512, 80, '2003-01-01'),
+('Pentium-IV', 3.0, 1024, 120, '2004-06-01'),
+('POWER-4', 1.5, 2048, 200, '2002-01-01'),
+('Athlon', 2.0, 512, 80, '2003-05-05');
+
+INSERT INTO sellers (name, address, phone) VALUES 
+('BestBuy', 'Main St 1', '111-222'),
+('ComputerWorld', 'Second St 5', '333-444');
+
+INSERT INTO market_offers (manuf_id, pc_id, seller_id, quantity, batch_price) VALUES 
+(1, 2, 1, 100, 50000.00), 
+(3, 1, 1, 50, 20000.00),  
+(2, 4, 2, 10, 5000.00),   
+(2, 2, 2, 20, 12000.00),  
+(1, 3, 1, 5, 25000.00),   
+(3, 3, 2, 10, 45000.00);  
+Выборки: 
+•	Определить фирму, которая представляет самую новую модель на базе процессора «Pentium-IV». 
+SELECT m.name
+FROM manufacturers m, market_offers mo, pc_specs p
+WHERE m.manuf_id = mo.manuf_id AND mo.pc_id = p.pc_id
+  AND p.processor = 'Pentium-IV'
+ORDER BY p.release_date DESC
+LIMIT 1;
+•	Выбрать модель с наибольшей тактовой частотой, которая выпускается в г. «Богодухов». 
+SELECT p.processor, p.frequency, p.ram_size
+FROM pc_specs p, market_offers mo, manufacturers m
+WHERE p.pc_id = mo.pc_id AND mo.manuf_id = m.manuf_id
+  AND m.city = 'Богодухов'
+ORDER BY p.frequency DESC
+LIMIT 1;
+•	Определить фирму, которая представляет на рынки товары на наибольшую сумму. 
+SELECT s.name
+FROM sellers s, market_offers mo
+WHERE s.seller_id = mo.seller_id
+GROUP BY s.seller_id
+ORDER BY SUM(mo.batch_price) DESC
+LIMIT 1;
+•	Выбрать города, в которых выпускаются ПЭВМ на базе процессора «POWER-4». 
+SELECT DISTINCT m.city
+FROM manufacturers m, market_offers mo, pc_specs p
+WHERE m.manuf_id = mo.manuf_id AND mo.pc_id = p.pc_id
+  AND p.processor = 'POWER-4';

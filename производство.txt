@@ -1,0 +1,120 @@
+USE mydb;
+
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    is_standard BOOLEAN,
+    note TEXT,
+    target_annual_volume INT
+);
+
+CREATE TABLE factories (
+    factory_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50)
+);
+
+CREATE TABLE materials (
+    material_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50),
+    unit VARCHAR(20),
+    price DECIMAL(10,2)
+);
+
+CREATE TABLE specifications (
+    spec_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    material_id INT,
+    quantity DECIMAL(10,2),
+    date_start DATE,
+    date_end DATE,
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (material_id) REFERENCES materials(material_id)
+);
+
+CREATE TABLE production_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    year INT,
+    volume INT,
+    product_id INT,
+    factory_id INT,
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (factory_id) REFERENCES factories(factory_id)
+);
+
+INSERT INTO products (name, is_standard, target_annual_volume) VALUES 
+('Трансформатор', 1, 1000),
+('Старый станок', 0, 50),
+('Микросхема', 1, 5000),
+('Кабель силовой', 1, 10000);
+
+INSERT INTO factories (name, address, phone) VALUES 
+('Завод Электро', 'Москва', '123'),
+('Техно-Пром', 'Омск', '456');
+
+INSERT INTO materials (name, type, unit, price) VALUES 
+('Медь', 'Цветной металл', 'кг', 800.00),
+('Алюминий', 'Цветной металл', 'кг', 300.00),
+('Сталь', 'Черный металл', 'кг', 50.00),
+('Лапша', 'Изоляция', 'м', 10.00),
+('Золото техн', 'Цветной металл', 'г', 5000.00);
+
+INSERT INTO specifications (product_id, material_id, quantity, date_start, date_end) VALUES 
+(1, 1, 5.0, '2023-01-01', NULL),
+(1, 2, 2.0, '2023-01-01', NULL),
+(2, 3, 100.0, '2020-01-01', NULL),
+(3, 5, 0.5, '2024-01-01', '2024-12-31'),
+(3, 5, 0.3, '2025-01-01', NULL),
+(4, 1, 1.0, '2025-01-01', NULL),
+(4, 4, 10.0, '2025-01-01', NULL);
+
+INSERT INTO production_log (year, volume, product_id, factory_id) VALUES 
+(2024, 100, 2, 1),
+(2024, 1000, 3, 2),
+(2025, 500, 1, 1),
+(2025, 2000, 3, 2),
+(2025, 1200, 4, 1);
+
+
+
+
+
+
+
+
+
+Выборки: 
+•	Определить изделие, в которое входит больше всего материалов типа «цветной металл». 
+SELECT p.name 
+FROM products p, specifications s, materials m
+WHERE p.product_id = s.product_id 
+  AND s.material_id = m.material_id
+  AND m.type = 'Цветной металл'
+GROUP BY p.product_id
+ORDER BY COUNT(DISTINCT m.material_id) DESC
+LIMIT 1;
+•	Вывести список изделий, которые не производились в текущем году. 
+SELECT name 
+FROM products 
+WHERE product_id NOT IN (
+    SELECT DISTINCT product_id 
+    FROM production_log 
+    WHERE year = 2025
+);
+•	Вывести список изделий, для которых затраты на материалы в текущем году снизились по сравнению с предыдущим годом. 
+SELECT p.name
+FROM products p, specifications s, materials m
+WHERE p.product_id = s.product_id AND s.material_id = m.material_id
+GROUP BY p.product_id
+HAVING 
+    SUM(IF(s.date_start <= '2025-01-01' AND (s.date_end >= '2025-01-01' OR s.date_end IS NULL), s.quantity * m.price, 0)) <
+    SUM(IF(s.date_start <= '2024-01-01' AND (s.date_end >= '2024-01-01' OR s.date_end IS NULL), s.quantity * m.price, 0));
+•	Вывести среднемесячный расход материала «лапша» в текущем году.
+SELECT (SUM(pl.volume * s.quantity) / 12) as avg_monthly_usage
+FROM production_log pl, specifications s, materials m
+WHERE pl.product_id = s.product_id
+  AND s.material_id = m.material_id
+  AND m.name = 'Лапша'
+  AND pl.year = 2025;

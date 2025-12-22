@@ -1,0 +1,90 @@
+USE mydb;
+
+CREATE TABLE suppliers (
+    supplier_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50)
+);
+
+CREATE TABLE products (
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    unit VARCHAR(20),
+    stock_quantity INT,
+    description TEXT
+);
+
+CREATE TABLE deliveries (
+    delivery_id INT AUTO_INCREMENT PRIMARY KEY,
+    delivery_date DATE,
+    delivered_amount INT,
+    price DECIMAL(10,2),
+    invoice_number VARCHAR(50),
+    product_id INT,
+    supplier_id INT,
+    FOREIGN KEY (product_id) REFERENCES products(product_id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+);
+
+INSERT INTO suppliers (name, address, phone) VALUES 
+('ООО "Техно-Мир"', 'Москва', '111'),
+('ИП Дешевле.нет', 'Тверь', '222'),
+('ЗАО "Строй-Комплект"', 'Омск', '333');
+
+INSERT INTO products (product_name, unit, stock_quantity) VALUES 
+('Коврик для мыши', 'шт', 100),
+('Инструмент', 'набор', 50),
+('Монитор', 'шт', 20);
+
+INSERT INTO deliveries (delivery_date, delivered_amount, price, invoice_number, product_id, supplier_id) VALUES 
+('2025-01-10', 10, 100.00, 'INV-1', 1, 1),
+('2025-01-10', 5, 2000.00, 'INV-2', 2, 1),
+('2025-01-10', 2, 15000.00, 'INV-3', 3, 1),
+('2025-02-01', 50, 50.00, 'INV-4', 1, 2),
+('2025-03-05', 5, 15000.00, 'INV-5', 3, 1),
+('2024-05-10', 10, 1800.00, 'OLD-1', 2, 3),
+('2025-06-12', 25, 2000.00, 'NEW-1', 2, 3);
+
+
+
+
+
+
+Выборки: 
+•	Выбрать поставщиков, которые поставляют все товары. 
+SELECT s.name
+FROM suppliers s, deliveries d
+WHERE s.supplier_id = d.supplier_id
+GROUP BY s.supplier_id
+HAVING COUNT(DISTINCT d.product_id) = (SELECT COUNT(*) FROM products);
+•	Определить поставщика, который поставляет товар «коврик для мыши» по самой низкой в среднем цене. 
+SELECT s.name, AVG(d.price)
+FROM suppliers s, deliveries d, products p
+WHERE s.supplier_id = d.supplier_id 
+  AND d.product_id = p.product_id
+  AND p.product_name = 'Коврик для мыши'
+GROUP BY s.supplier_id
+ORDER BY AVG(d.price) ASC 
+LIMIT 1;
+•	Вывести названия товаров, цены на которые никогда не повышались. 
+SELECT p.product_name
+FROM products p, deliveries d
+WHERE p.product_id = d.product_id
+GROUP BY p.product_id
+HAVING MIN(d.price) = MAX(d.price);
+•	Определить, на сколько единиц возросли поставки товара «инструмент» в текущем году по сравнению с предыдущим годом. 
+SELECT 
+    (SELECT IFNULL(SUM(d.delivered_amount), 0)
+     FROM deliveries d, products p 
+     WHERE d.product_id = p.product_id 
+       AND p.product_name = 'Инструмент' 
+       AND YEAR(d.delivery_date) = 2025)
+    - 
+    (SELECT IFNULL(SUM(d.delivered_amount), 0)
+     FROM deliveries d, products p 
+     WHERE d.product_id = p.product_id 
+       AND p.product_name = 'Инструмент' 
+       AND YEAR(d.delivery_date) = 2024) 
+AS result;
+

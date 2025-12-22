@@ -1,0 +1,109 @@
+CREATE TABLE departments (
+    dept_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    head_teacher_id INT 
+);
+
+CREATE TABLE subjects (
+    subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    hours INT,
+    control_type ENUM('Экзамен', 'Зачет', 'Курсовая'),
+    section VARCHAR(50) 
+);
+
+CREATE TABLE teachers (
+    teacher_id INT AUTO_INCREMENT PRIMARY KEY,
+    fio VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    position VARCHAR(50), 
+    degree VARCHAR(50),   
+    dept_id INT,
+    FOREIGN KEY (dept_id) REFERENCES departments(dept_id)
+);
+
+CREATE TABLE schedule (
+    schedule_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_num VARCHAR(20), 
+    lesson_date DATE,
+    lesson_time TIME,
+    group_name VARCHAR(20), 
+    teacher_id INT,
+    subject_id INT,
+    FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
+);
+
+
+INSERT INTO departments (name, head_teacher_id) VALUES 
+('Прикладная математика', 1),
+('Информационные системы', 2),
+('Гуманитарные науки', 3);
+
+INSERT INTO subjects (name, hours, control_type, section) VALUES 
+('Высшая математика', 120, 'Экзамен', 'Математический'),   -- id 1
+('Базы данных', 72, 'Курсовая', 'Компьютерный'),            -- id 2
+('Философия', 36, 'Зачет', 'Гуманитарный'),                 -- id 3
+('Программирование', 108, 'Экзамен', 'Компьютерный');      
+
+INSERT INTO teachers (fio, address, position, degree, dept_id) VALUES 
+('Петров Петр Петрович', 'ул. Ленина, 10', 'Профессор', 'Доктор наук', 1),    
+('Иванов Иван Иванович', 'ул. Гагарина, 5', 'Доцент', 'Кандидат наук', 2),     
+('Сидорова Анна Павловна', 'ул. Мира, 15', 'Ст. преподаватель', 'Нет', 3),     
+('Лентяев Сергей Сергеевич', 'ул. Дивана, 1', 'Ассистент', 'Нет', 2);          
+
+INSERT INTO schedule (room_num, lesson_date, lesson_time, group_name, teacher_id, subject_id) VALUES 
+('305-а', '2025-03-10', '09:00:00', 'ИС-21', 2, 2), 
+('305-а', '2025-03-12', '10:40:00', 'ИС-21', 2, 4),  
+('201',   '2025-03-15', '09:00:00', 'ИС-21', 1, 1),  
+('101', '2025-04-01', '09:00:00', 'Гум-11', 3, 3),   
+('101', '2025-04-01', '09:00:00', 'ИС-22', 1, 1),
+('305-б', '2025-05-20', '12:00:00', 'ИС-22', 2, 2);
+
+
+Выборки: 
+•	Выбрать преподавателя, который был «без работы» весной текущего года. 
+SELECT t.fio, t.position
+FROM teachers t
+WHERE t.teacher_id NOT IN (
+    SELECT DISTINCT s.teacher_id 
+    FROM schedule s
+    WHERE MONTH(s.lesson_date) BETWEEN 3 AND 5
+      AND YEAR(s.lesson_date) = 2025
+);
+•	Определить возможные «накладки» аудиторий в расписании. 
+SELECT 
+    s1.lesson_date AS Дата,
+    s1.lesson_time AS Время,
+    s1.room_num AS Аудитория,
+    s1.group_name AS Группа_1,
+    s2.group_name AS Группа_2
+FROM schedule s1, schedule s2
+WHERE s1.room_num = s2.room_num
+  AND s1.lesson_date = s2.lesson_date
+  AND s1.lesson_time = s2.lesson_time
+  AND s1.schedule_id < s2.schedule_id; 
+•	Вывести расписание занятий определенной группы на март текущего года. 
+SELECT s.lesson_date, s.lesson_time, sub.name AS Предмет, t.fio AS Преподаватель, s.room_num
+FROM schedule s, subjects sub, teachers t
+WHERE s.subject_id = sub.subject_id 
+  AND s.teacher_id = t.teacher_id
+  AND s.group_name = 'ИС-21'   
+  AND MONTH(s.lesson_date) = 3
+  AND YEAR(s.lesson_date) = 2025
+ORDER BY s.lesson_date, s.lesson_time;
+•	Определить для каждой группы долю дисциплин каждого цикла в процентах. 
+SELECT 
+    sch.group_name AS Группа,
+    sub.section AS Цикл_дисциплины,
+    COUNT(*) AS Колво_занятий,
+    (COUNT(*) * 100.0 / (
+        SELECT COUNT(*) 
+        FROM schedule s_all 
+        WHERE s_all.group_name = sch.group_name
+    )) AS Процент
+FROM schedule sch, subjects sub
+WHERE sch.subject_id = sub.subject_id
+GROUP BY sch.group_name, sub.section;
+
+

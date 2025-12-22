@@ -1,0 +1,89 @@
+USE mydb;
+
+CREATE TABLE sys_owners (
+    owner_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE processes (
+    proc_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    priority INT,
+    class_name VARCHAR(50),
+    owner_id INT,
+    FOREIGN KEY (owner_id) REFERENCES sys_owners(owner_id)
+);
+
+CREATE TABLE resources (
+    res_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    total_quantity INT,
+    price_per_unit DECIMAL(10,2)
+);
+
+CREATE TABLE allocations (
+    alloc_id INT AUTO_INCREMENT PRIMARY KEY,
+    proc_id INT,
+    res_id INT,
+    quantity INT,
+    status ENUM('Requested', 'Allocated'),
+    FOREIGN KEY (proc_id) REFERENCES processes(proc_id),
+    FOREIGN KEY (res_id) REFERENCES resources(res_id)
+);
+
+INSERT INTO sys_owners (name) VALUES 
+('System'),
+('User_Admin'),
+('User_Guest');
+
+INSERT INTO processes (name, priority, class_name, owner_id) VALUES 
+('Kernel_Task', 100, 'Критический', 1),
+('DB_Server', 80, 'Серверный', 2),
+('Word_Proc', 50, 'Нормальный', 3),
+('Backup_Job', 20, 'Запасной', 2),
+('High_Prio_Job', 90, 'Критический', 2);
+
+INSERT INTO resources (name, total_quantity, price_per_unit) VALUES 
+('CPU', 16, 500.00),
+('RAM', 32000, 10.00),
+('file data1', 1, 0.00),
+('Printer', 1, 200.00);
+
+INSERT INTO allocations (proc_id, res_id, quantity, status) VALUES 
+(1, 3, 1, 'Allocated'), 
+(2, 3, 1, 'Requested'), 
+(3, 3, 1, 'Requested'), 
+(4, 2, 64000, 'Requested'), 
+(3, 4, 1, 'Allocated'), 
+(5, 4, 1, 'Requested'), 
+(2, 2, 16000, 'Allocated');
+Выборки: 
+•	Определить, есть ли в системе процессы с запросами, превышающими возможности системы. 
+SELECT p.name, r.name, a.quantity, r.total_quantity
+FROM processes p, resources r, allocations a
+WHERE p.proc_id = a.proc_id AND r.res_id = a.res_id
+  AND a.status = 'Requested'
+  AND a.quantity > r.total_quantity;
+•	Выбрать очередь к ресурсу «файл data1» в порядке убывания приоритетов. 
+SELECT p.name, p.priority
+FROM processes p, allocations a, resources r
+WHERE p.proc_id = a.proc_id AND a.res_id = r.res_id
+  AND r.name = 'file data1'
+  AND a.status = 'Requested'
+ORDER BY p.priority DESC;
+•	Определить, в очередях к каким ресурсам есть процессы с приоритетом выше, чем у тех, которые владеют ресурсами. 
+SELECT DISTINCT r.name
+FROM resources r
+JOIN allocations a_q ON r.res_id = a_q.res_id AND a_q.status = 'Requested'
+JOIN processes p_q ON a_q.proc_id = p_q.proc_id
+JOIN allocations a_h ON r.res_id = a_h.res_id AND a_h.status = 'Allocated'
+JOIN processes p_h ON a_h.proc_id = p_h.proc_id
+WHERE p_q.priority > p_h.priority;
+•	Определить владельца, у которого «самые большие аппетиты» в ценовом выражении. 
+SELECT o.name
+FROM sys_owners o, processes p, allocations a, resources r
+WHERE o.owner_id = p.owner_id AND p.proc_id = a.proc_id AND a.res_id = r.res_id
+  AND a.status = 'Allocated'
+GROUP BY o.owner_id
+ORDER BY SUM(a.quantity * r.price_per_unit) DESC
+LIMIT 1;

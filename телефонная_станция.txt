@@ -1,0 +1,76 @@
+USE mydb;
+
+CREATE TABLE ats (
+    ats_id INT AUTO_INCREMENT PRIMARY KEY,
+    ats_code INT NOT NULL,
+    district_code INT,
+    capacity INT
+);
+
+CREATE TABLE subscribers (
+    sub_id INT AUTO_INCREMENT PRIMARY KEY,
+    last_name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    note TEXT
+);
+
+CREATE TABLE phone_lines (
+    line_id INT AUTO_INCREMENT PRIMARY KEY,
+    phone_number VARCHAR(20),
+    ats_id INT,
+    sub_id INT,
+    paired_number VARCHAR(20),
+    has_blocker BOOLEAN,
+    debt DECIMAL(10,2),
+    install_date DATE,
+    FOREIGN KEY (ats_id) REFERENCES ats(ats_id),
+    FOREIGN KEY (sub_id) REFERENCES subscribers(sub_id)
+);
+INSERT INTO ats (ats_code, district_code, capacity) VALUES 
+(47, 101, 1000),
+(48, 101, 2000),
+(55, 102, 500);
+
+INSERT INTO subscribers (last_name, address) VALUES 
+('Иванов', 'ул. Ленина 1'),
+('Петров', 'ул. Ленина 2'),
+('Сидоров', 'ул. Мира 5'),
+('Кузнецов', 'ул. Садовая 10');
+
+INSERT INTO phone_lines (phone_number, ats_id, sub_id, paired_number, debt, has_blocker) VALUES 
+('22-33-44', 1, 1, '22-33-45', 150.00, 1),
+('22-33-45', 1, 2, '22-33-44', 0.00, 1),
+('55-00-01', 3, 3, NULL, 50.00, 0),
+('47-00-00', 1, 3, NULL, 200.00, 0),
+('99-99-99', 2, 4, NULL, 0.00, 0),
+('99-99-99', 2, 1, NULL, 0.00, 0);
+Выборки: 
+•	Выбрать пары сблокированных телефонов. 
+SELECT t1.phone_number AS Phone_1, t2.phone_number AS Phone_2, s1.last_name AS Owner_1, s2.last_name AS Owner_2
+FROM phone_lines t1
+JOIN phone_lines t2 ON t1.paired_number = t2.phone_number AND t1.ats_id = t2.ats_id
+JOIN subscribers s1 ON t1.sub_id = s1.sub_id
+JOIN subscribers s2 ON t2.sub_id = s2.sub_id
+WHERE t1.phone_number < t2.phone_number;
+•	Определить АТС, районы действия которых перекрываются. 
+SELECT a1.ats_code, a2.ats_code, a1.district_code
+FROM ats a1, ats a2
+WHERE a1.district_code = a2.district_code
+  AND a1.ats_id < a2.ats_id;
+•	Выбрать телефоны группового пользования, вывести их номера и фамилии абонентов. 
+SELECT p.phone_number, s.last_name
+FROM phone_lines p
+JOIN subscribers s ON p.sub_id = s.sub_id
+WHERE (p.phone_number, p.ats_id) IN (
+    SELECT phone_number, ats_id
+    FROM phone_lines
+    GROUP BY phone_number, ats_id
+    HAVING COUNT(*) > 1
+);
+•	Выбрать список абонентов АТС 47, имеющих задолженность больше 100 руб. 
+SELECT s.last_name, p.phone_number, p.debt
+FROM phone_lines p
+JOIN subscribers s ON p.sub_id = s.sub_id
+JOIN ats a ON p.ats_id = a.ats_id
+WHERE a.ats_code = 47
+  AND p.debt > 100;

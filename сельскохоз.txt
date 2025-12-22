@@ -1,0 +1,71 @@
+USE mydb;
+
+CREATE TABLE enterprises (
+    ent_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    reg_date DATE,
+    ownership_type VARCHAR(50),
+    workers_count INT,
+    main_product VARCHAR(100),
+    is_advanced BOOLEAN,
+    profit DECIMAL(15,2),
+    note TEXT
+);
+
+CREATE TABLE products (
+    prod_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    unit VARCHAR(20),
+    purchase_price DECIMAL(10,2)
+);
+
+CREATE TABLE supplies (
+    supply_id INT AUTO_INCREMENT PRIMARY KEY,
+    ent_id INT,
+    prod_id INT,
+    supply_date DATE,
+    volume DECIMAL(10,2),
+    cost_price DECIMAL(10,2),
+    FOREIGN KEY (ent_id) REFERENCES enterprises(ent_id),
+    FOREIGN KEY (prod_id) REFERENCES products(prod_id)
+);
+
+INSERT INTO enterprises (name, reg_date, ownership_type, workers_count, main_product, is_advanced, profit) VALUES 
+('Совхоз Победа', '2000-01-01', 'Государственная', 500, 'Зерно', 0, -50000.00),
+('Агро-Юг', '2010-05-05', 'Частная', 50, 'Фрукты', 1, 150000.00),
+('КАМАЗ', '1990-01-01', 'Акционерная', 1000, 'Техника', 1, 5000000.00),
+('Фермер Джо', '2020-02-02', 'Частная', 5, 'Овощи', 0, 10000.00);
+
+INSERT INTO products (name, unit, purchase_price) VALUES 
+('Банан', 'кг', 80.00),
+('Картофель', 'кг', 20.00),
+('Пшеница', 'тонна', 15000.00),
+('Трактор', 'шт', 2000000.00);
+
+INSERT INTO supplies (ent_id, prod_id, supply_date, volume, cost_price) VALUES 
+(1, 2, '2025-09-01', 1000, 25.00),
+(2, 1, '2025-05-01', 5000, 40.00),
+(4, 1, '2025-06-01', 100, 50.00),
+(3, 4, '2025-01-01', 10, 1500000.00);
+Выборки: 
+•	Вывести предприятия, являющиеся нерентабельными в текущем году. 
+SELECT name 
+FROM enterprises 
+WHERE profit < 0;
+•	Определить, какого вида собственности предприятие является ведущим в поставке продукта «банан». 
+SELECT e.ownership_type
+FROM enterprises e, supplies s, products p
+WHERE e.ent_id = s.ent_id AND s.prod_id = p.prod_id
+  AND p.name = 'Банан'
+GROUP BY e.ownership_type
+ORDER BY SUM(s.volume) DESC 
+LIMIT 1;
+•	Определить объем дохода на одного работника в предприятии «КАМАЗ». 
+SELECT (profit / workers_count) AS income_per_worker
+FROM enterprises
+WHERE name = 'КАМАЗ';
+•	Вывести список продуктов, для которых закупочная цена, как правило, ниже себестоимости производителя. 
+SELECT DISTINCT p.name
+FROM products p, supplies s
+WHERE p.prod_id = s.prod_id
+  AND p.purchase_price < s.cost_price;

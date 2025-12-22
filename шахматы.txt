@@ -1,0 +1,90 @@
+USE mydb;
+
+CREATE TABLE players (
+    player_id INT AUTO_INCREMENT PRIMARY KEY,
+    last_name VARCHAR(100) NOT NULL,
+    birth_date DATE,
+    country VARCHAR(100),
+    rating INT,
+    rank_level VARCHAR(50),
+    is_wc_contender BOOLEAN,
+    note TEXT
+);
+
+CREATE TABLE tournaments (
+    tourn_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    country VARCHAR(100),
+    city VARCHAR(100),
+    start_date DATE,
+    level_name VARCHAR(50)
+);
+
+CREATE TABLE participations (
+    part_id INT AUTO_INCREMENT PRIMARY KEY,
+    tourn_id INT,
+    player_id INT,
+    start_number INT,
+    place INT,
+    FOREIGN KEY (tourn_id) REFERENCES tournaments(tourn_id),
+    FOREIGN KEY (player_id) REFERENCES players(player_id)
+);
+
+INSERT INTO players (last_name, country, rating, is_wc_contender) VALUES 
+('Карлсен', 'Норвегия', 2850, 1),
+('Непомнящий', 'Россия', 2790, 1),
+('Карякин', 'Россия', 2750, 0),
+('Грищук', 'Россия', 2740, 0),
+('Накамура', 'США', 2780, 1);
+
+INSERT INTO tournaments (name, country, city, start_date) VALUES 
+('Moscow Open', 'Россия', 'Москва', '2025-02-01'),
+('New York Chess', 'США', 'Нью-Йорк', '2025-05-01'),
+('London Classic', 'Англия', 'Лондон', '2025-08-01');
+
+INSERT INTO participations (tourn_id, player_id, place) VALUES 
+(1, 2, 1), 
+(1, 3, 2), 
+(1, 4, 3), 
+(1, 1, 4), 
+(2, 1, 4), 
+(2, 5, 1), 
+(2, 2, 2), 
+(2, 3, 3), 
+(3, 2, 1), 
+(3, 5, 2), 
+(3, 1, 3);
+Выборки: 
+•	Выбрать турнир с самым высоким рейтингом участников. 
+SELECT t.name, AVG(p.rating) AS avg_rating
+FROM tournaments t, participations pa, players p
+WHERE t.tourn_id = pa.tourn_id AND pa.player_id = p.player_id
+GROUP BY t.tourn_id
+ORDER BY avg_rating DESC
+LIMIT 1;
+•	Выбрать те турниры, где все призовые места заняли представители страны-хозяина турнира. 
+SELECT t.name
+FROM tournaments t, participations pa, players p
+WHERE t.tourn_id = pa.tourn_id AND pa.player_id = p.player_id
+  AND pa.place <= 3
+GROUP BY t.tourn_id
+HAVING COUNT(*) = SUM(CASE WHEN t.country = p.country THEN 1 ELSE 0 END);
+•	Выбрать тех шахматистов, которые заняли не менее трех призовых мест в течение текущего года. 
+SELECT p.last_name
+FROM players p, participations pa, tournaments t
+WHERE p.player_id = pa.player_id AND pa.tourn_id = t.tourn_id
+  AND pa.place <= 3
+  AND YEAR(t.start_date) = 2025
+GROUP BY p.player_id
+HAVING COUNT(*) >= 3;
+•	Определить турниры, в которых участник с самым высоким рейтингом занял последнее место. 
+SELECT name, last_name
+FROM (
+    SELECT t.name, p.last_name,
+           RANK() OVER(PARTITION BY t.tourn_id ORDER BY p.rating DESC) as r_best,
+           RANK() OVER(PARTITION BY t.tourn_id ORDER BY pa.place DESC) as p_last
+    FROM tournaments t
+    JOIN participations pa ON t.tourn_id = pa.tourn_id
+    JOIN players p ON pa.player_id = p.player_id
+) x
+WHERE r_best = 1 AND p_last = 1;

@@ -1,0 +1,79 @@
+USE mydb;
+
+CREATE TABLE scientists (
+    scientist_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    organization VARCHAR(100),
+    country VARCHAR(100),
+    degree VARCHAR(50)
+);
+
+CREATE TABLE conferences (
+    conf_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    location VARCHAR(100),
+    conf_date DATE
+);
+
+CREATE TABLE participations (
+    part_id INT AUTO_INCREMENT PRIMARY KEY,
+    scientist_id INT,
+    conf_id INT,
+    part_type VARCHAR(50),
+    topic VARCHAR(200),
+    has_publication BOOLEAN,
+    FOREIGN KEY (scientist_id) REFERENCES scientists(scientist_id),
+    FOREIGN KEY (conf_id) REFERENCES conferences(conf_id)
+);
+
+INSERT INTO scientists (name, organization, country, degree) VALUES 
+('Иванов И.И.', 'МГУ', 'Россия', 'Доктор наук'),
+('Петров П.П.', 'РАН', 'Россия', 'Кандидат наук'),
+('Смит Дж.', 'MIT', 'США', 'PhD'),
+('Ли В.', 'Пекинский Ун-т', 'Китай', 'Доктор наук'),
+('Мюллер Г.', 'Берлинский Ун-т', 'Германия', 'Доктор наук');
+
+INSERT INTO conferences (name, location, conf_date) VALUES 
+('AI Future 2025', 'Москва', '2025-05-20'),
+('Space 2025', 'Хьюстон', '2025-09-10'),
+('Secret Science', 'Берлин', '2025-11-01');
+
+INSERT INTO participations (scientist_id, conf_id, part_type, topic, has_publication) VALUES 
+(1, 1, 'Доклад', 'Нейросети', 1),
+(2, 1, 'Стендовый', 'Данные', 1),
+(3, 1, 'Слушатель', NULL, 0),
+(4, 1, 'Доклад', 'Роботы', 1), 
+(1, 2, 'Доклад', 'Марс', 1), 
+(3, 2, 'Доклад', 'Луна', 1), 
+(5, 3, 'Сообщение', 'Секрет', 0), 
+(1, 3, 'Слушатель', NULL, 0);
+Выборки: 
+•	Выбрать список ученых, имевших публикации в текущем году с указанием числа публикаций для каждого. 
+SELECT s.name, COUNT(*) AS pub_count
+FROM scientists s, participations p, conferences c
+WHERE s.scientist_id = p.scientist_id AND p.conf_id = c.conf_id
+  AND p.has_publication = 1
+  AND YEAR(c.conf_date) = 2025
+GROUP BY s.scientist_id;
+•	Выбрать названия конференций, материалы которых не опубликованы. 
+SELECT c.name
+FROM conferences c
+WHERE c.conf_id NOT IN (
+    SELECT DISTINCT p.conf_id 
+    FROM participations p 
+    WHERE p.has_publication = 1
+);
+•	Определить, в какой конференции участвовало больше всего докторов наук. 
+SELECT c.name
+FROM conferences c, participations p, scientists s
+WHERE c.conf_id = p.conf_id AND p.scientist_id = s.scientist_id
+  AND s.degree = 'Доктор наук'
+GROUP BY c.conf_id
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+•	Выбрать список конференций с указанием числа представленных на каждой из них стран.
+
+SELECT c.name, COUNT(DISTINCT s.country) AS countries_count
+FROM conferences c, participations p, scientists s
+WHERE c.conf_id = p.conf_id AND p.scientist_id = s.scientist_id
+GROUP BY c.conf_id;

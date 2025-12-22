@@ -1,0 +1,71 @@
+USE mydb;
+
+CREATE TABLE software (
+    soft_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    version VARCHAR(20),
+    type VARCHAR(50),
+    vendor VARCHAR(100),
+    release_date DATE,
+    app_area VARCHAR(100),
+    license_price DECIMAL(10,2)
+);
+
+CREATE TABLE software_users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region VARCHAR(100),
+    sphere VARCHAR(100)
+);
+
+CREATE TABLE installations (
+    install_id INT AUTO_INCREMENT PRIMARY KEY,
+    soft_id INT,
+    user_id INT,
+    install_cost DECIMAL(10,2),
+    install_date DATE,
+    uninstall_date DATE,
+    license_count INT,
+    FOREIGN KEY (soft_id) REFERENCES software(soft_id),
+    FOREIGN KEY (user_id) REFERENCES software_users(user_id)
+);
+
+INSERT INTO software (name, version, type, vendor, app_area, license_price) VALUES 
+('Windows Server', '2022', 'Server OS', 'Microsoft', 'Infrastructure', 1000.00),
+('Ubuntu Server', '22.04', 'Server OS', 'Canonical', 'Infrastructure', 0.00),
+('1C:Enterprise', '8.3', 'СУБД', '1C', 'Делопроизводство', 500.00),
+('Oracle DB', '19c', 'СУБД', 'Oracle', 'e-бизнес', 2000.00),
+('Apache', '2.4', 'Web-сервер', 'Apache', 'e-коммерция', 0.00),
+('Photoshop', 'CC', 'Графика', 'Adobe', 'Дизайн', 300.00);
+
+INSERT INTO software_users (name, region, sphere) VALUES 
+('Белый ветер', 'Москва', 'Ритейл'),
+('Техно-Сервис', 'Казань', 'IT'),
+('Банк Империал', 'СПб', 'Финансы');
+
+INSERT INTO installations (soft_id, user_id, install_cost, install_date, license_count) VALUES 
+(1, 1, 100.00, '2025-02-01', 5), 
+(3, 1, 50.00, '2025-03-01', 10), 
+(1, 2, 100.00, '2025-01-01', 2),
+(2, 2, 50.00, '2025-01-05', 20),
+(1, 3, 200.00, '2024-12-01', 50);
+Выборки: 
+•	Определить прикладную область, которая требует наибольшей номенклатуры программных продуктов. 
+SELECT app_area
+FROM software
+GROUP BY app_area
+ORDER BY COUNT(*) DESC
+LIMIT 1;
+•	Определить затраты на приобретение/модификацию программного обеспечения, сделанные покупателем «Белый ветер» в текущем году. 
+SELECT SUM((s.license_price * i.license_count) + i.install_cost) AS total_expenses
+FROM software_users u, installations i, software s
+WHERE u.user_id = i.user_id AND i.soft_id = s.soft_id
+  AND u.name = 'Белый ветер'
+  AND YEAR(i.install_date) = 2025;
+•	Выбрать список продуктов типа «серверные операционные системы», в порядке убывания их популярности. 
+SELECT s.name, COUNT(i.install_id) AS popularity
+FROM software s
+LEFT JOIN installations i ON s.soft_id = i.soft_id
+WHERE s.type = 'Server OS'
+GROUP BY s.soft_id
+ORDER BY popularity DESC;

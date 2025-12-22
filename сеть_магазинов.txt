@@ -1,0 +1,95 @@
+USE mydb;
+
+CREATE TABLE owners (
+    owner_id INT AUTO_INCREMENT PRIMARY KEY,
+    fio VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50),
+    birth_date DATE
+);
+
+CREATE TABLE shops (
+    shop_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50),
+    total_capital DECIMAL(15,2),
+    profile VARCHAR(50)
+);
+
+CREATE TABLE suppliers (
+    supplier_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200),
+    phone VARCHAR(50)
+);
+
+CREATE TABLE ownerships (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    owner_id INT,
+    shop_id INT,
+    deposit_amount DECIMAL(15,2),
+    reg_number VARCHAR(50),
+    reg_date DATE,
+    FOREIGN KEY (owner_id) REFERENCES owners(owner_id),
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id)
+);
+
+CREATE TABLE supplies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    supplier_id INT,
+    shop_id INT,
+    cost DECIMAL(15,2),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+    FOREIGN KEY (shop_id) REFERENCES shops(shop_id)
+);
+
+INSERT INTO owners (fio, address, phone, birth_date) VALUES 
+('Сидоров А.А.', 'Киевский, ул. Ленина 1', '111', '1960-01-01'),
+('Молодой И.И.', 'Центральный, ул. Мира 5', '222', '2005-05-05'),
+('Малолетний П.П.', 'Киевский, ул. Садовая 10', '333', '2010-01-01'),
+('Кузнецов В.В.', 'Заводской, пр. Труда 1', '444', '1980-01-01');
+
+INSERT INTO shops (name, address, total_capital, profile) VALUES 
+('Продукты 24', 'Киевский, ул. Ленина 100', 100000.00, 'Продуктовый'),
+('Канцтовары', 'Центральный, ул. Пушкина 1', 50000.00, 'Канцелярский'),
+('Ткани', 'Заводской, ул. Заводская 1', 200000.00, 'Галантерейный');
+
+INSERT INTO suppliers (name, address, phone) VALUES 
+('Опт-Торг', 'Москва', '000');
+
+INSERT INTO ownerships (owner_id, shop_id, deposit_amount, reg_number, reg_date) VALUES 
+(2, 1, 10000.00, 'REG-001', '2025-01-01'),
+(3, 1, 5000.00, 'REG-002', '2024-01-01'),
+(2, 2, 40000.00, 'REG-003', '2025-02-01'),
+(4, 1, 20000.00, 'REG-004', '2023-01-01'),
+(4, 3, 150000.00, 'REG-005', '2023-05-01');
+
+INSERT INTO supplies (supplier_id, shop_id, cost) VALUES 
+(1, 1, 5000.00);
+
+Выборки: 
+•	Определить самого молодого предпринимателя, владеющего собственностью в районе «Киевский». 
+SELECT o.fio
+FROM owners o, ownerships os, shops s
+WHERE o.owner_id = os.owner_id AND os.shop_id = s.shop_id
+  AND s.address LIKE '%Киевский%'
+ORDER BY o.birth_date DESC
+LIMIT 1;
+•	Определить случаи, когда регистрировалось владение лицами, не достигшими 18 лет. 
+SELECT o.fio, o.birth_date, os.reg_date
+FROM owners o, ownerships os
+WHERE o.owner_id = os.owner_id
+  AND os.reg_date < (o.birth_date + INTERVAL 18 YEAR);
+•	Определить случаи, когда больше 50% уставного капитала магазина внесено предпринимателем, проживающим в другом районе. 
+SELECT s.name, o.fio
+FROM shops s, owners o, ownerships os
+WHERE s.shop_id = os.shop_id AND o.owner_id = os.owner_id
+  AND os.deposit_amount > (s.total_capital * 0.5)
+  AND SUBSTRING_INDEX(s.address, ',', 1) != SUBSTRING_INDEX(o.address, ',', 1);
+•	Вывести список профилей магазинов, которыми владеет предприниматель «Кузнецов» в порядке убывания вложенного в них капитала
+SELECT s.profile
+FROM shops s, owners o, ownerships os
+WHERE s.shop_id = os.shop_id AND o.owner_id = os.owner_id
+  AND o.fio LIKE '%Кузнецов%'
+ORDER BY os.deposit_amount DESC;
