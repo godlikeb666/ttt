@@ -93,3 +93,8 @@ WHERE o.owner_id = c.owner_id
 GROUP BY o.owner_id
 HAVING COUNT(DISTINCT r.mechanic_id) = 1;
 •	Для каждой категории работ определить, механик какого разряда чаще всего назначается на эту категорию работ.
+SELECT r.category, m.rank_level, COUNT(*) as cnt
+FROM repairs r, mechanics m
+WHERE r.mechanic_id = m.mechanic_id
+GROUP BY r.category, m.rank_level
+ORDER BY r.category, cnt DESC;
